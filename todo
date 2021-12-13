@@ -1,0 +1,40 @@
+Added APIs
+✅ Create admin - /create_admin
+-- ✅ CreateBankAccount - /user/createBankAccount
+
+Users can
+✅   Login - /auth/Login
+✅   Deposit money - user/deposit_money/:account_number
+✅   Withdraw money - user/withdraw_money/account_number
+✅   Transfer funds to other users - user/transfer_money/account_number
+✅   See a list of their transactions - user/view_transactions/account_number
+
+Admin can
+✅ Create admin - /create_admin
+✅ Add user - /admin/add_user
+✅ Delete - /delete-user/:user-id
+-- ✅ CreateBankAccount - /user/createBankAccount
+✅ Reverse transaction(transfer) - /transactions/:transaction_id
+✅ Disable a users account - /admin-disable-user-account/:user_id
+
+
+user account
+{
+    ✅fullname
+    ✅email
+    ✅password
+    ✅account_number
+    ✅total account balance
+    ✅withdrawal amount
+    ✅deposit amount
+    ✅status: (disable/active)
+}
+
+transactions
+{
+    account_id
+    credit_amount
+    debit_amount
+    total_balance
+    receivers_id
+}
