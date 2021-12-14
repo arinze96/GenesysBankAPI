@@ -7,7 +7,7 @@ const userVerifyToken = async (req, res, next) => {
          const decode = await jwt.verify(req.headers.authorization.split(' ')[1],JWT_SECRET_KEY);
         //  console.log(decode);
          try {
-            const user = await User.findOne({ _id : decode.user_id }).exec();
+            const user = await User.findOne({ _id : decode.id }).exec();
             // console.log(user)
             if (!user.email) {
               throw new Error("Not Authorized");

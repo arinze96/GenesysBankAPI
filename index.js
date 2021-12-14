@@ -109,12 +109,9 @@ app.post("/add-user", VerifyToken ,async (req, res) => {
         }
     });
 
-    const token = jwt.sign({ user_id: user._id }, JWT_SECRET_KEY);
-
     res.status(201).send({
       message: "User Created",
       data: {
-        token,
         email: user.email,
         fullname: user.fullname,
       },
@@ -125,10 +122,6 @@ app.post("/add-user", VerifyToken ,async (req, res) => {
       .send({ message: "User account could no be Created", data: error });
   }
 });
-
-app.delete("/admin-delete-user", VerifyToken, async(req, res) =>{
-
-})
 
 app.delete("/admin-delete-user/:user_id", VerifyToken, async (req, res) => {
     try {
@@ -146,31 +139,23 @@ app.delete("/admin-delete-user/:user_id", VerifyToken, async (req, res) => {
     }
   });
   
-
-
-  app.patch("/admin-disable-user-account/:user_id", VerifyToken, async (req, res) => {
-    const data = req.body
-    const user_id = req.params.user_id;
+  //nw
+app.post("/admin-change-status", VerifyToken, async (req, res) => {
+    const { user_id , status  } = req.body
     try {
-    //   const user = await User.findById(user_id)
-    const userToBeUpdated = await User.findOne({ _id: req.params.user_id })
-    //   console.log(user);
-      if (!userToBeUpdated){
-          return res.status(400).send({ message: "User profile does not exist" })
-      } 
-      const updatedUser = await User.findByIdAndUpdate(
-        user_id,
-        { $set: { account_status: data.account_status } },
-        { new: true }
-      )
-      res.status(200).send({ message: "Updated user profile", data: updatedUser })
+       const account = await BankAccount.findOneAndUpdate({ user: user_id }, {account_status : (status) ?  'active' : 'disabled' },{new : true})
+      if (account.account_status){
+          return res.status(400).send({ message: `User account ${(status) ?  'activated' : 'disabled'}` })
+      }
     } catch (error) {
-        res.status(401).send({message:error.message,status:false});
+        res.status(401).send({message:'Account status failed to change',status:false});
+
     }
   }
   )
 
-app.post("/user-login", UserVerifyToken, async (req, res) => {
+  //working
+app.post("/user-login", async (req, res) => {
     const data = req.body;
     try {
       const user = await User.findOne({ email: data.email }).exec();
@@ -199,6 +184,52 @@ app.post("/user-login", UserVerifyToken, async (req, res) => {
     }
   
   });
+
+  //working
+  app.post("/deposit",UserVerifyToken, async (req,res)=> {
+      const {user} = req;
+      const {amount} = req.body;
+      try{
+        const account = await BankAccount.findOneAndUpdate({user : user._id }, {$inc :  { total_account_balance : amount  }});
+        if(account.account_status){
+          res.status(200).send({message:`User successfully deposited ${amount}`,status:true});
+        }
+      }catch(error){
+        res.status(401).send({message:`Sorry  deposit of ${amount} failed `,status:false});
+      }
+  })
+
+
+  app.post("/withdraw",UserVerifyToken, async (req,res)=> {
+    const {user} = req;
+    const {amount} = req.body;
+    try{
+      const account = await BankAccount.findOneAndUpdate({user : user._id }, {$inc :  { total_account_balance : -amount  }});
+      if(account.account_status){
+        res.status(200).send({message:`User successfully withdrew ${amount}`,status:true});
+      }
+    }catch(error){
+      res.status(401).send({message:`Sorry  withdrawal of ${amount} failed `,status:false});
+    }
+})
+
+app.post("/transfer",UserVerifyToken, async (req,res)=> {
+  const {user} = req;
+  const {amount , account_number} = req.body;
+  try{
+    let account  = await BankAccount.findOne( { user : user._id });
+    if(account.total_account_balance  < amount){
+      throw new Error(`Insufficient fund`);
+    }
+     account = await BankAccount.findOneAndUpdate({user  : user._id }, {$inc :  { total_account_balance : -amount  }} ); // deduct from sender
+     await BankAccount.findOneAndUpdate({account_number : account_number }, {$inc :  { total_account_balance : amount  }}); // add t reciever
+    if(account.account_status){
+      res.status(200).send({message:`Transfer of ${amount} to ${account_number} was successfull `,status:true});
+    }
+  }catch(error){
+    res.status(401).send({message:(error.message) ? error.message : `Sorry  transfer of ${amount} failed `,status:false});
+  }
+})
 
 app.listen(port, async () => {
   try {

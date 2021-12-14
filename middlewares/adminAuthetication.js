@@ -11,7 +11,7 @@ const verifyToken = async (req, res, next) => {
          try {
             const admin = await Admin.findOne({ _id : decode.admin_id }).exec();
             // console.log(admin);
-            if (!admin.email) {
+            if (!admin.admin) {
               throw new Error("Not Authorized");
             }
             req.admin = admin;
