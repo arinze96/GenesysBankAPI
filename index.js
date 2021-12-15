@@ -2,7 +2,6 @@ const express = require("express");
 const morgan = require("morgan");
 require('dotenv').config()
 const jwt = require("jsonwebtoken");
-// const bcrypt = require("bcrypt")
 const app = express();
 const port = process.env.PORT || 5000;
 const JWT_SECRET_KEY = "gop4u5t9g309tuf94tufg2t92u42urf2r";
@@ -12,7 +11,7 @@ const VerifyToken = require("./middlewares/adminAuthetication");
 const UserVerifyToken = require("./middlewares/userAuthentication");
 const User = require("./models/User");
 const BankAccount = require('./models/bankAccount')
-// const auth = require("./middlewares/auth")
+const Transactions = require('./models/transaction')
 
 app.use(morgan("dev"));
 app.use(express.json());
@@ -57,6 +56,7 @@ app.post("/create_admin", async (req, res) => {
   }
 });
 
+//THIS ENDPOINT FIRES FOR AN ADMIN TO LOGIN AND PERFORM ADMINISTRATIVE ACTIVITIES
 app.post("/admin-login", async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -86,6 +86,7 @@ app.post("/admin-login", async (req, res) => {
 
 });
 
+//THIS ENDPOINT FIRES WHEN AN ADMIN WANTS TO ADD A USER
 app.post("/add-user", VerifyToken ,async (req, res) => {
   const data = req.body;
   console.log(data);
@@ -123,23 +124,22 @@ app.post("/add-user", VerifyToken ,async (req, res) => {
   }
 });
 
+//THIS ENDPOINT FIRES WHEN AN ADMIN WANTS TO DELETE A USER
 app.delete("/admin-delete-user/:user_id", VerifyToken, async (req, res) => {
     try {
-        console.log(req.params.user_id);
         if (!req.admin){
             return res.status(403).send({ message: "You can't delete this user" })
         }
       const userToBeDeleted = await User.findOne({ _id: req.params.user_id })
       console.log(userToBeDeleted, 'this is remove');
       const user = await User.findByIdAndDelete(req.params.user_id)
-    //   const bankAccount = await BankAccount.findByIdAndDelete(req.params.user_id)
       res.status(200).send({ message: "User deleted", data: {user} })
     } catch (error) {
         res.status(401).send({message:error.message,status:false});
     }
   });
   
-  //nw
+// THIS ENDPOINT FIRES WHEN ADMIN WANT TO DISABLE OR ACTIVATE A USER
 app.post("/admin-change-status", VerifyToken, async (req, res) => {
     const { user_id , status  } = req.body
     try {
@@ -154,7 +154,7 @@ app.post("/admin-change-status", VerifyToken, async (req, res) => {
   }
   )
 
-  //working
+// THIS ENDPOINT FIRES WHEN A USER WANTS TO LOGIN
 app.post("/user-login", async (req, res) => {
     const data = req.body;
     try {
@@ -185,21 +185,26 @@ app.post("/user-login", async (req, res) => {
   
   });
 
-  //working
+//THIS ENPOINT FIRES WHEN A USER WANTS TO DEPOSIT MONEY TO AN ACCOUNT
   app.post("/deposit",UserVerifyToken, async (req,res)=> {
       const {user} = req;
-      const {amount} = req.body;
+      const data = req.body;
       try{
-        const account = await BankAccount.findOneAndUpdate({user : user._id }, {$inc :  { total_account_balance : amount  }});
+        const account = await BankAccount.findOneAndUpdate({user : user._id }, {$inc :  { total_account_balance : data.amount  }});
+        const transaction = await new Transaction({
+          transaction_type: 'deposit',
+          amount: data.amount,
+          account_number: data.account_number
+        }).save();
         if(account.account_status){
-          res.status(200).send({message:`User successfully deposited ${amount}`,status:true});
+          res.status(200).send({message:`User successfully deposited ${data.amount}`,status:true});
         }
       }catch(error){
-        res.status(401).send({message:`Sorry  deposit of ${amount} failed `,status:false});
+        res.status(401).send({message:`Sorry  deposit of ${data.amount} failed `,status:false});
       }
   })
 
-//working
+//THIS ENPOINT FIRES WHEN A USER WANTS TO WITHDRAW FUNDS FROM HIS/HER ACCOUNT
   app.post("/withdraw",UserVerifyToken, async (req,res)=> {
     const {user} = req;
     const {amount} = req.body;
@@ -213,6 +218,8 @@ app.post("/user-login", async (req, res) => {
     }
 })
 
+
+// THIS ENPOINT FIRES WHEN A USER WANTS TO TRRANSFER FUNDS TO ANOTHER ACCOUNT
 app.post("/transfer",UserVerifyToken, async (req,res)=> {
   const {user} = req;
   const {amount , account_number} = req.body;
